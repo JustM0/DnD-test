@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Or 'ran Campaign Portal — Elite Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- VIEW 0: LANDING & PARTY LOBBY -->
+<div id="view-landing" class="view-screen active">
+  <div class="landing-container">
+    <div class="landing-card">
+      <div class="landing-title">Or 'ran Portal</div>
+      <div class="landing-subtitle">Campaign Session Manager</div>
+
+      <!-- Create Party (DM) -->
+      <div class="lobby-section">
+        <strong style="font-family: 'Cinzel', serif; color: var(--text-main);">Host a Campaign (Dungeon Master)</strong>
+        <p style="font-size:11px; color:var(--text-muted); line-height: 1.4;">Initialize a secure offline session, manage characters, and organize your worldbuilding notebooks.</p>
+        <button class="btn-accent" onclick="hostNewParty()" style="justify-content: center; padding: 10px;">✨ Create New Party</button>
+      </div>
+
+      <!-- Join Party (Player) -->
+      <div class="lobby-section">
+        <strong style="font-family: 'Cinzel', serif; color: var(--text-main);">Join a Party (Player)</strong>
+        <p style="font-size:11px; color:var(--text-muted); line-height: 1.4;">Connect to your DM's session using the assigned Party Code.</p>
+        <div class="form-row">
+          <div class="form-group"><label>Party Code</label><input type="text" id="joinCodeInput" placeholder="e.g. ORR-4829" style="text-transform: uppercase;"></div>
+          <div class="form-group"><label>Character Name</label><input type="text" id="joinNameInput" placeholder="e.g. Alistair"></div>
+        </div>
+        <button class="btn-accent" onclick="joinPartyAsPlayer()" style="justify-content: center; padding: 10px;">🛡️ Join as Player</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW 1: DM COMMAND SCREEN -->
+<div id="view-dm" class="view-screen">
+  <header>
+    <div class="brand">
+      <span>Or 'ran DM Screen</span>
+      <span class="sub" id="dmPartyCodeDisplay">Party: ---</span>
+    </div>
+    <div class="top-tools">
+      <div id="dmDiceOutput" class="dice-banner">🎲 Ready behind the screen</div>
+      <button onclick="quickRoll(20)">🎲 d20</button>
+      <button onclick="switchView('landing')">🚪 Lobby</button>
+      <button onclick="exportData()">💾 Export</button>
+      <button onclick="document.getElementById('importFile').click()">📂 Import</button>
+      <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- Left Pane: Tracker -->
+    <section class="tracker-pane">
+      <div class="pane-header">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <strong style="font-family: 'Cinzel', serif;">Party & NPC Roster</strong>
+          <select id="rosterFilter" onchange="renderDmCharacters()">
+            <option value="ALL">All Roster</option>
+            <option value="PC">PCs Only</option>
+            <option value="NPC">NPCs Only</option>
+          </select>
+        </div>
+        <button class="btn-accent" onclick="openCharacterModal()">+ Add Character</button>
+      </div>
+
+      <div class="aoe-bar">
+        <span style="font-size:11px; color:var(--text-muted); font-weight:600;">⚡ Party AoE (PCs):</span>
+        <input type="number" id="aoeAmount" value="20" style="width:55px;" placeholder="Amt">
+        <button class="btn-hp" onclick="applyAoE('hp', -1)">🗡️ Damage</button>
+        <button class="btn-sp" onclick="applyAoE('hp', 1)">💖 Heal</button>
+        <button class="btn-mp" onclick="fullRestParty()">⛺ Full Rest</button>
+      </div>
+
+      <div id="dmCharList" class="char-list"></div>
+    </section>
+
+    <!-- Right Pane: Lore Notebooks -->
+    <section class="lore-pane">
+      <div class="lore-toolbar">
+        <div class="cat-tabs" id="catTabs"></div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="noteSearch" placeholder="🔍 Search notes..." style="width:190px;" oninput="renderNotesList()">
+          <button class="btn-accent" onclick="createNewNote()">+ Note</button>
+        </div>
+      </div>
+
+      <div class="lore-body">
+        <div class="notes-list" id="notesList"></div>
+        <div class="note-editor" id="noteEditor">
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="noteTitle" placeholder="Note Title..." style="flex:1; font-size:15px; font-weight:700;" oninput="saveActiveNote()">
+            <select id="noteCategory" onchange="saveActiveNote()">
+              <option value="Plot Hooks & Quests">Plot Hooks & Quests</option>
+              <option value="NPCs & Factions">NPCs & Factions</option>
+              <option value="Locations & Worldbuilding">Locations & Worldbuilding</option>
+              <option value="Random Encounters">Random Encounters</option>
+              <option value="Session Recaps & Archives">Session Recaps & Archives</option>
+              <option value="Rules & Mechanics">Rules & Mechanics</option>
+            </select>
+            <button class="btn-danger" onclick="deleteActiveNote()">🗑️</button>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="text" id="noteTags" placeholder="Tags (#aradia, #quest)" style="flex:1;" oninput="saveActiveNote()">
+            <span id="saveStatus" style="font-size:11px; color:var(--text-muted);">Saved locally</span>
+          </div>
+          <textarea id="noteContent" placeholder="Write session notes, lore, or rules..." oninput="saveActiveNote()"></textarea>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- VIEW 2: PLAYER CHARACTER VIEW -->
+<div id="view-player" class="view-screen">
+  <header>
+    <div class="brand">
+      <span>Or 'ran Character Sheet</span>
+      <span class="sub" id="playerPartyCodeDisplay">Party: ---</span>
+    </div>
+    <div class="top-tools">
+      <button onclick="quickRollPlayer(20)">🎲 Roll d20</button>
+      <button onclick="switchView('landing')">🚪 Lobby</button>
+    </div>
+  </header>
+
+  <div class="player-workspace" id="playerWorkspaceContent">
+    <!-- Dynamically populated player sheet -->
+  </div>
+</div>
+
+<!-- MODAL: ADD / EDIT CHARACTER -->
+<div class="modal-backdrop" id="charModal">
+  <div class="modal">
+    <h3 id="charModalTitle" style="color: var(--accent-hover);">Add Character</h3>
+    <input type="hidden" id="editCharId">
+    <div class="form-row">
+      <div class="form-group"><label>Name</label><input type="text" id="cName" placeholder="e.g. Alistair"></div>
+      <div class="form-group"><label>Type</label><select id="cType"><option value="PC">PC (Player)</option><option value="NPC">NPC / Boss</option></select></div>
+      <div class="form-group"><label>Race</label><input type="text" id="cRace" placeholder="Human, Elf..."></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Class / Subclass</label><input type="text" id="cClass" placeholder="Fighter, Knight..."></div>
+      <div class="form-group"><label>Level</label><input type="number" id="cLevel" value="1" min="1"></div>
+      <div class="form-group"><label>Armor / Defense</label><input type="text" id="cArmor" placeholder="Leather Med (+50)"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>STR</label><input type="number" id="cSTR" value="10"></div>
+      <div class="form-group"><label>DEX</label><input type="number" id="cDEX" value="10"></div>
+      <div class="form-group"><label>CON</label><input type="number" id="cCON" value="10"></div>
+      <div class="form-group"><label>INT</label><input type="number" id="cINT" value="10"></div>
+      <div class="form-group"><label>WIS</label><input type="number" id="cWIS" value="10"></div>
+      <div class="form-group"><label>CHA</label><input type="number" id="cCHA" value="10"></div>
+      <div class="form-group"><label>LCK</label><input type="number" id="cLCK" value="10"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Max HP</label><input type="number" id="cMaxHP" value="100"></div>
+      <div class="form-group"><label>Max MP</label><input type="number" id="cMaxMP" value="20"></div>
+      <div class="form-group"><label>Max SP</label><input type="number" id="cMaxSP" value="80"></div>
+      <div class="form-group"><label>Gold</label><input type="number" id="cGold" value="50"></div>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+      <button onclick="closeCharacterModal()">Cancel</button>
+      <button class="btn-accent" onclick="saveCharacterFromModal()">Save Character</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
